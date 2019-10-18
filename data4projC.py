@@ -8,9 +8,9 @@ import cv2
 (orig_rows, orig_cols) = (480, 640)
 # Dimensions for training dataset
 # Count of training data; number of rows, colomns and channels in each image
-# 'chan' is 3 for RGB, 1 for Grayscale
+# 'channels' is 3 for RGB, 1 for Grayscale
 # Change these as needed
-(count, rows, cols, chan) = (889, 120, 160, 1)
+(count, rows, cols, channels) = (889, 120, 160, 1)
 
 keep_orig_size = ((rows is orig_rows) and (cols is orig_cols))
 num_class = 5
@@ -33,15 +33,15 @@ def read_data_sets(file_dir, val_size=100, one_hot=False):
         next(readCSV)   #ignore the header row
         
         #Pre-initialize arrays to avoid ddynamic allocation
-        if (chan is 1) and (not keep_orig_size):
+        if (channels is 1) and (not keep_orig_size):
             img = np.empty((orig_rows, orig_cols), dtype='uint8')
-        train_images = np.empty((count, rows, cols, chan), dtype='float32')
+        train_images = np.empty((count, rows, cols, channels), dtype='float32')
         train_labels = np.empty(count, dtype='uint8')
         
         i = 0
         for row in readCSV:
             file_path = file_dir+'Training/'+row[0]
-            if chan is 1:       # read as Grayscale
+            if channels is 1:       # read as Grayscale
                 if keep_orig_size:
                     train_images[i] = np.expand_dims(
                                             cv2.imread(file_path, cv2.IMREAD_GRAYSCALE), 
@@ -71,6 +71,8 @@ def read_data_sets(file_dir, val_size=100, one_hot=False):
             # Reading the true labels
             train_labels[i] = row[1]
             i = i+1
+            if (i == count):
+                break
     
     # Updating the variables from the read data
     num_class = np.max(train_labels)+1
