@@ -1,0 +1,11 @@
+0. try vgg16, vgg19, resnet50, imagenet
+1. try with k means on original data
+2. try with k means with vgg 16 on the original
+3. try k means with autoencoder on the original
+4. try k means with vgg16 an autoencoder on original
+
+
+
+Output from k means:
+- Find each class from the Output
+- Within each class get the summary (find the mode within each class) of the actual classes

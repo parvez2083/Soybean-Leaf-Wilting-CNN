@@ -38,29 +38,32 @@ X_train = np.stack(temp)
 X_train = X_train.reshape(n, 480, 640, 1)
 
 
-# train_x /= 255.0
+# X_train /= 255.0
 # train_x = train_x.reshape(-1, 307200).astype('float32')
 
 y_train = train_files.annotation.values
 
 # Use first 700 examples or training, 100 for testing, 96 for validation
 train_size = 700
-test_size = 100
+test_size = 96
+val_size = 100
 
-X_train, X_test = X_train[:train_size], X_train[train_size:]
-y_train, y_test = y_train[:train_size], y_train[train_size:]
 
-# X_test, X_val = X_test[:test_size], X_test[test_size:]
-# y_test, y_val = y_test[:test_size], y_test[test_size:]
+X_test, X_train = X_train[:test_size], X_train[test_size:]
+y_test, y_train = y_train[:test_size], y_train[test_size:]
+
+X_val, X_train = X_train[:val_size], X_train[val_size:]
+y_val, y_train = y_train[:val_size], y_train[val_size:]
 
 print(X_train.shape)
 print(X_test.shape)
-# print(X_val.shape)
+print(X_val.shape)
 
 
 
 with tf.device('/device:GPU:0'):
 
+    # initialize the VGG16 model from the keras library
     vgg16_model = tf.keras.applications.VGG16(include_top=False, 
                                             weights=None, 
                                             input_tensor=None, 
@@ -87,9 +90,10 @@ with tf.device('/device:GPU:0'):
     # # Add 'softmax' instead of earlier 'prediction' layer.
     # model.add(tf.keras.layers.Dense(5, activation='softmax'))
 
-    y_pred = vgg16_model.predict(X_train)
 
-
+    # get the predictions from the model
+    X_train_vgg = vgg16_model.predict(X_train)
+    X_val_vgg = vgg16_model.predict(X_val)
 
 
 
@@ -115,19 +119,19 @@ with tf.device('/device:GPU:0'):
 
 
 
-    print(y_pred.shape)
-
-
-
+    print(X_train_vgg.shape)
 
 
     # Do k-means clustering on the VGG_16 output
     km = KMeans(n_jobs=-1, n_clusters=5, n_init=20)
 
-
+    """
+    We would pass the output of the VGG16 model to the k-means clustering algorithm, check its performance.
+    Here, n is 5, which is the number of class labels.
+    """
 
     # this is our input placeholder
-    input_img = tf.keras.Input(shape=(y_pred.shape))
+    input_img = tf.keras.Input(shape=(15, 20, 512, ))
 
     # "encoded" is the encoded representation of the input
     encoded = tf.keras.layers.Dense(500, activation='relu')(input_img)
@@ -139,7 +143,7 @@ with tf.device('/device:GPU:0'):
     decoded = tf.keras.layers.Dense(2000, activation='relu')(encoded)
     decoded = tf.keras.layers.Dense(500, activation='relu')(decoded)
     decoded = tf.keras.layers.Dense(500, activation='relu')(decoded)
-    decoded = tf.keras.layers.Dense(307200)(decoded)
+    decoded = tf.keras.layers.Dense(512)(decoded)
 
     # this model maps an input to its reconstruction
     autoencoder = tf.keras.Model(input_img, decoded)
@@ -150,13 +154,26 @@ with tf.device('/device:GPU:0'):
 
     autoencoder.compile(optimizer='adam', loss='mse')
 
-    train_history = autoencoder.fit(y_pred, y_pred, epochs=10, batch_size=16)
+    # train the autoencoder
+    train_history = autoencoder.fit(X_train_vgg, X_train_vgg, epochs=10, batch_size=16)
 
-    pred_auto_train = encoder.predict(X_train)
-    pred_auto = encoder.predict(X_test)
+    pred_auto_train = encoder.predict(X_train_vgg)
+    pred_auto = encoder.predict(X_val_vgg)
 
-    km.fit(pred_auto_train)
+    # print(pred_auto_train.shape)
+    # print(pred_auto.shape)
+
+    pred_auto_train = pred_auto_train.reshape(-1, 3000).astype('float32')
+    pred_auto = pred_auto.reshape(-1, 3000).astype('float32')
+
+
+    # fit the k means clustering with the output from the autoencoder
+    kmeans = km.fit(pred_auto_train)
     pred = km.predict(pred_auto)
 
-    score = normalized_mutual_info_score(y_test, pred)
+    # find the score from the k-means output
+    score = normalized_mutual_info_score(y_val, pred)
     print(score)
+
+    print(kmeans.labels_)
+    print(y_val)
