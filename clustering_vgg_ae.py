@@ -41,7 +41,7 @@ for img_name in train_files.file_name:
 X_train = np.stack(temp)
 
 # change this for different shapes
-X_train = X_train.reshape(n, 480, 640, 1)
+X_train = X_train.reshape(n, COLS, ROWS, 1)
 
 
 # X_train /= 255.0
@@ -73,7 +73,7 @@ with tf.device('/device:GPU:0'):
     vgg16_model = tf.keras.applications.VGG16(include_top=False, 
                                             weights=None, 
                                             input_tensor=None, 
-                                            input_shape=(480, 640, 1), 
+                                            input_shape=(COLS, ROWS, CHANNEL), 
                                             pooling=None, 
                                             classes=5)
 
@@ -137,13 +137,13 @@ with tf.device('/device:GPU:0'):
     """
 
     # this is our input placeholder
-    input_img = tf.keras.Input(shape=(15, 20, 512, ))
+    input_img = tf.keras.Input(shape=(X_train_vgg.shape[1], X_train_vgg.shape[2], X_train_vgg.shape[3], ))
 
     # "encoded" is the encoded representation of the input
     encoded = tf.keras.layers.Dense(500, activation='relu')(input_img)
     encoded = tf.keras.layers.Dense(500, activation='relu')(encoded)
     encoded = tf.keras.layers.Dense(2000, activation='relu')(encoded)
-    encoded = tf.keras.layers.Dense(10, activation='sigmoid')(encoded)
+    encoded = tf.keras.layers.Dense(ENCODED_LAYER_SIZE, activation='sigmoid')(encoded)
 
     # "decoded" is the lossy reconstruction of the input
     decoded = tf.keras.layers.Dense(2000, activation='relu')(encoded)
@@ -166,11 +166,11 @@ with tf.device('/device:GPU:0'):
     pred_auto_train = encoder.predict(X_train_vgg)
     pred_auto = encoder.predict(X_val_vgg)
 
-    # print(pred_auto_train.shape)
-    # print(pred_auto.shape)
+    print(pred_auto_train.shape)
+    print(pred_auto.shape)
 
-    pred_auto_train = pred_auto_train.reshape(-1, 3000).astype('float32')
-    pred_auto = pred_auto.reshape(-1, 3000).astype('float32')
+    pred_auto_train = pred_auto_train.reshape(-1, pred_auto_train.shape[1] * pred_auto_train.shape[2] * pred_auto_train.shape[3]).astype('float32')
+    pred_auto = pred_auto.reshape(-1, pred_auto.shape[1] * pred_auto.shape[2] * pred_auto.shape[3]).astype('float32')
 
 
     # fit the k means clustering with the output from the autoencoder
