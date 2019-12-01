@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import csv
 import cv2
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -7,11 +8,6 @@ import numpy as np
 import tensorflow as tf
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import precision_score
-from sklearn.metrics import recall_score
-from sklearn.metrics import f1_score
-
 
 """
 Two different methods for reading training and testing images since train_files.csv does not preserve order of files in the training images folder
@@ -233,15 +229,11 @@ def main():
 
     best_results(history)
 
-    test_labels = np.array([np.argmax(prediction) for prediction in predictions])
-    np.savetxt("predictions.csv", test_labels, fmt="%d", delimiter=",")
+    with open('predictions.csv', 'w', newline='') as myfile:
+        wr = csv.writer(myfile)
+        wr.writerow(test_labels)
 
 
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
